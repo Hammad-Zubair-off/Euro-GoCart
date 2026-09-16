@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
 import Loading from "@/components/Loading"
-import { productDummyData } from "@/assets/assets"
+import { api } from "@/lib/api"
 
 export default function StoreManageProducts() {
 
@@ -13,14 +13,20 @@ export default function StoreManageProducts() {
     const [products, setProducts] = useState([])
 
     const fetchProducts = async () => {
-        setProducts(productDummyData)
-        setLoading(false)
+        try {
+            const data = await api('/store/products', { auth: true })
+            setProducts(data || [])
+        } catch (err) {
+            toast.error(err.message || 'Failed to load products')
+        } finally {
+            setLoading(false)
+        }
     }
 
     const toggleStock = async (productId) => {
-        // Logic to toggle the stock of a product
-
-
+        const updated = await api(`/products/${productId}/stock`, { method: 'PATCH', auth: true })
+        setProducts((prev) => prev.map((p) => (p.id === productId ? updated : p)))
+        toast.success(updated.inStock ? 'In stock' : 'Out of stock')
     }
 
     useEffect(() => {

@@ -1,9 +1,9 @@
 'use client'
-import { storesDummyData } from "@/assets/assets"
 import StoreInfo from "@/components/admin/StoreInfo"
 import Loading from "@/components/Loading"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { api } from "@/lib/api"
 
 export default function AdminApprove() {
 
@@ -12,14 +12,23 @@ export default function AdminApprove() {
 
 
     const fetchStores = async () => {
-        setStores(storesDummyData)
-        setLoading(false)
+        try {
+            const data = await api('/admin/stores?status=pending', { auth: true })
+            setStores(data || [])
+        } catch (err) {
+            toast.error(err.message || 'Failed to load')
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleApprove = async ({ storeId, status }) => {
-        // Logic to approve a store
-
-
+        await api(`/admin/stores/${storeId}/status`, {
+            method: 'PATCH',
+            auth: true,
+            body: { status },
+        })
+        setStores((prev) => prev.filter((s) => s.id !== storeId))
     }
 
     useEffect(() => {

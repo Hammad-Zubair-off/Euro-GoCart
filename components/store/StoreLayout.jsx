@@ -5,26 +5,45 @@ import Link from "next/link"
 import { ArrowRightIcon } from "lucide-react"
 import SellerNavbar from "./StoreNavbar"
 import SellerSidebar from "./StoreSidebar"
-import { dummyStoreData } from "@/assets/assets"
+import { useAuth } from "../AuthProvider"
+import { api } from "@/lib/api"
 
 const StoreLayout = ({ children }) => {
 
-
+    const { isLoggedIn, loading: authLoading, setShowLogin } = useAuth()
     const [isSeller, setIsSeller] = useState(false)
     const [loading, setLoading] = useState(true)
     const [storeInfo, setStoreInfo] = useState(null)
 
-    const fetchIsSeller = async () => {
-        setIsSeller(true)
-        setStoreInfo(dummyStoreData)
-        setLoading(false)
-    }
-
     useEffect(() => {
-        fetchIsSeller()
-    }, [])
+        if (authLoading) return
 
-    return loading ? (
+        if (!isLoggedIn) {
+            setIsSeller(false)
+            setLoading(false)
+            setShowLogin(true)
+            return
+        }
+
+        const fetchIsSeller = async () => {
+            try {
+                const data = await api('/store/me', { auth: true })
+                if (data.store && data.store.status === 'approved' && data.store.isActive) {
+                    setIsSeller(true)
+                    setStoreInfo(data.store)
+                } else {
+                    setIsSeller(false)
+                }
+            } catch {
+                setIsSeller(false)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchIsSeller()
+    }, [isLoggedIn, authLoading, setShowLogin])
+
+    return loading || authLoading ? (
         <Loading />
     ) : isSeller ? (
         <div className="flex flex-col h-screen">
@@ -39,8 +58,8 @@ const StoreLayout = ({ children }) => {
     ) : (
         <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
             <h1 className="text-2xl sm:text-4xl font-semibold text-slate-400">You are not authorized to access this page</h1>
-            <Link href="/" className="bg-slate-700 text-white flex items-center gap-2 mt-8 p-2 px-6 max-sm:text-sm rounded-full">
-                Go to home <ArrowRightIcon size={18} />
+            <Link href="/create-store" className="bg-slate-700 text-white flex items-center gap-2 mt-8 p-2 px-6 max-sm:text-sm rounded-full">
+                Become a seller <ArrowRightIcon size={18} />
             </Link>
         </div>
     )

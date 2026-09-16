@@ -1,32 +1,66 @@
+'use client'
 import { PlusIcon, SquarePenIcon, XIcon } from 'lucide-react';
 import React, { useState } from 'react'
-import AddressModal from './AddressModal';
-import { useSelector } from 'react-redux';
-import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
+import AddressModal from './AddressModal'
+import { useDispatch, useSelector } from 'react-redux'
+import toast from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
+import { api } from '@/lib/api'
+import { useAuth } from './AuthProvider'
+import { clearCart } from '@/lib/features/cart/cartSlice'
 
 const OrderSummary = ({ totalPrice, items }) => {
 
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 
-    const router = useRouter();
+    const router = useRouter()
+    const dispatch = useDispatch()
+    const { requireAuth } = useAuth()
 
-    const addressList = useSelector(state => state.address.list);
+    const addressList = useSelector(state => state.address.list)
 
-    const [paymentMethod, setPaymentMethod] = useState('COD');
-    const [selectedAddress, setSelectedAddress] = useState(null);
-    const [showAddressModal, setShowAddressModal] = useState(false);
-    const [couponCodeInput, setCouponCodeInput] = useState('');
-    const [coupon, setCoupon] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('COD')
+    const [selectedAddress, setSelectedAddress] = useState(null)
+    const [showAddressModal, setShowAddressModal] = useState(false)
+    const [couponCodeInput, setCouponCodeInput] = useState('')
+    const [coupon, setCoupon] = useState('')
 
     const handleCouponCode = async (event) => {
-        event.preventDefault();
-        
+        event.preventDefault()
+        if (!requireAuth()) throw new Error('Please login')
+        const data = await api('/coupons/verify', {
+            method: 'POST',
+            auth: true,
+            body: { code: couponCodeInput.trim() },
+        })
+        setCoupon(data)
+        toast.success('Coupon applied')
     }
 
     const handlePlaceOrder = async (e) => {
-        e.preventDefault();
+        e.preventDefault()
+        if (!requireAuth()) throw new Error('Please login')
+        if (!selectedAddress?.id) throw new Error('Please select an address')
+        if (!items?.length) throw new Error('Cart is empty')
 
+        const data = await api('/orders/checkout', {
+            method: 'POST',
+            auth: true,
+            body: {
+                addressId: selectedAddress.id,
+                paymentMethod,
+                ...(coupon?.code ? { couponCode: coupon.code } : {}),
+            },
+        })
+
+        dispatch(clearCart())
+
+        if (paymentMethod === 'STRIPE' && data.url) {
+            window.location.href = data.url
+            return
+        }
+
+        toast.success('Order placed')
         router.push('/orders')
     }
 
@@ -58,7 +92,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                                         <option value="">Select Address</option>
                                         {
                                             addressList.map((address, index) => (
-                                                <option key={index} value={index}>{address.name}, {address.city}, {address.state}, {address.zip}</option>
+                                                <option key={address.id || index} value={index}>{address.name}, {address.city}, {address.state}, {address.zip}</option>
                                             ))
                                         }
                                     </select>

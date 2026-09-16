@@ -2,22 +2,37 @@
 
 import { Star } from 'lucide-react';
 import React, { useState } from 'react'
-import { XIcon } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { XIcon } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { api } from '@/lib/api'
+import { useDispatch } from 'react-redux'
+import { addRating } from '@/lib/features/rating/ratingSlice'
 
 const RatingModal = ({ ratingModal, setRatingModal }) => {
 
+    const dispatch = useDispatch()
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
 
     const handleSubmit = async () => {
-        if (rating < 0 || rating > 5) {
+        if (rating < 1 || rating > 5) {
             return toast('Please select a rating');
         }
         if (review.length < 5) {
             return toast('write a short review');
         }
 
+        const created = await api('/ratings', {
+            method: 'POST',
+            auth: true,
+            body: {
+                orderId: ratingModal.orderId,
+                productId: ratingModal.productId,
+                rating,
+                review,
+            },
+        })
+        dispatch(addRating(created))
         setRatingModal(null);
     }
 

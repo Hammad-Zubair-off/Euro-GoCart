@@ -1,10 +1,10 @@
 'use client'
-import { dummyStoreDashboardData } from "@/assets/assets"
 import Loading from "@/components/Loading"
 import { CircleDollarSignIcon, ShoppingBasketIcon, StarIcon, TagsIcon } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
 
 export default function Dashboard() {
 
@@ -28,8 +28,14 @@ export default function Dashboard() {
     ]
 
     const fetchDashboardData = async () => {
-        setDashboardData(dummyStoreDashboardData)
-        setLoading(false)
+        try {
+            const data = await api('/store/dashboard', { auth: true })
+            setDashboardData(data)
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {

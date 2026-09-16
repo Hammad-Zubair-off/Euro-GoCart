@@ -1,9 +1,9 @@
 'use client'
-import { storesDummyData } from "@/assets/assets"
 import StoreInfo from "@/components/admin/StoreInfo"
 import Loading from "@/components/Loading"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { api } from "@/lib/api"
 
 export default function AdminStores() {
 
@@ -11,13 +11,19 @@ export default function AdminStores() {
     const [loading, setLoading] = useState(true)
 
     const fetchStores = async () => {
-        setStores(storesDummyData)
-        setLoading(false)
+        try {
+            const data = await api('/admin/stores', { auth: true })
+            setStores(data || [])
+        } catch (err) {
+            toast.error(err.message || 'Failed to load stores')
+        } finally {
+            setLoading(false)
+        }
     }
 
     const toggleIsActive = async (storeId) => {
-        // Logic to toggle the status of a store
-
+        const updated = await api(`/admin/stores/${storeId}/toggle-active`, { method: 'PATCH', auth: true })
+        setStores((prev) => prev.map((s) => (s.id === storeId ? updated : s)))
     }
 
     useEffect(() => {
