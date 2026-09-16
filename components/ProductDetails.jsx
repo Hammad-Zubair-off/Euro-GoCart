@@ -1,12 +1,19 @@
 'use client'
 
-import { addToCart } from "@/lib/features/cart/cartSlice";
+import { addToCart, setCart } from "@/lib/features/cart/cartSlice";
 import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
+import { useAuth } from "./AuthProvider";
+import { api } from "@/lib/api";
+import toast from "react-hot-toast";
+
+function cartTotal(cartItems) {
+    return Object.values(cartItems || {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
+}
 
 const ProductDetails = ({ product }) => {
 
@@ -15,17 +22,27 @@ const ProductDetails = ({ product }) => {
 
     const cart = useSelector(state => state.cart.cartItems);
     const dispatch = useDispatch();
-
+    const { requireAuth } = useAuth();
     const router = useRouter()
 
     const [mainImage, setMainImage] = useState(product.images[0]);
 
-    const addToCartHandler = () => {
-        dispatch(addToCart({ productId }))
+    const addToCartHandler = async () => {
+        if (!requireAuth()) return;
+        try {
+            dispatch(addToCart({ productId }))
+            const data = await api('/cart/add', { method: 'POST', auth: true, body: { productId, quantity: 1 } })
+            dispatch(setCart({ cartItems: data.cartItems, total: cartTotal(data.cartItems) }))
+        } catch (err) {
+            toast.error(err.message || 'Could not add to cart')
+        }
     }
 
-    const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;
-    
+    const ratings = product.rating || [];
+    const averageRating = ratings.length
+        ? ratings.reduce((acc, item) => acc + item.rating, 0) / ratings.length
+        : 0;
+
     return (
         <div className="flex max-lg:flex-col gap-12">
             <div className="flex max-sm:flex-col-reverse gap-3">
@@ -46,7 +63,7 @@ const ProductDetails = ({ product }) => {
                     {Array(5).fill('').map((_, index) => (
                         <StarIcon key={index} size={14} className='text-transparent mt-0.5' fill={averageRating >= index + 1 ? "#00C950" : "#D1D5DB"} />
                     ))}
-                    <p className="text-sm ml-3 text-slate-500">{product.rating.length} Reviews</p>
+                    <p className="text-sm ml-3 text-slate-500">{ratings.length} Reviews</p>
                 </div>
                 <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
                     <p> {currency}{product.price} </p>

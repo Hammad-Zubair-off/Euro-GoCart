@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { DeleteIcon } from "lucide-react"
-import { couponDummyData } from "@/assets/assets"
+import { api } from "@/lib/api"
 
 export default function AdminCoupons() {
 
@@ -20,14 +20,35 @@ export default function AdminCoupons() {
     })
 
     const fetchCoupons = async () => {
-        setCoupons(couponDummyData)
+        try {
+            const data = await api('/admin/coupons', { auth: true })
+            setCoupons(data || [])
+        } catch (err) {
+            toast.error(err.message || 'Failed to load coupons')
+        }
     }
 
     const handleAddCoupon = async (e) => {
         e.preventDefault()
-        // Logic to add a coupon
-
-
+        const created = await api('/admin/coupons', {
+            method: 'POST',
+            auth: true,
+            body: {
+                ...newCoupon,
+                discount: Number(newCoupon.discount),
+                expiresAt: new Date(newCoupon.expiresAt).toISOString(),
+            },
+        })
+        setCoupons((prev) => [created, ...prev])
+        setNewCoupon({
+            code: '',
+            description: '',
+            discount: '',
+            forNewUser: false,
+            forMember: false,
+            isPublic: false,
+            expiresAt: new Date()
+        })
     }
 
     const handleChange = (e) => {
@@ -35,9 +56,8 @@ export default function AdminCoupons() {
     }
 
     const deleteCoupon = async (code) => {
-        // Logic to delete a coupon
-
-
+        await api(`/admin/coupons/${code}`, { method: 'DELETE', auth: true })
+        setCoupons((prev) => prev.filter((c) => c.code !== code))
     }
 
     useEffect(() => {

@@ -2,8 +2,14 @@
 import { XIcon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
+import { useDispatch } from "react-redux"
+import { addAddress } from "@/lib/features/address/addressSlice"
+import { api } from "@/lib/api"
+import { useAuth } from "./AuthProvider"
 
 const AddressModal = ({ setShowAddressModal }) => {
+    const dispatch = useDispatch()
+    const { requireAuth } = useAuth()
 
     const [address, setAddress] = useState({
         name: '',
@@ -25,7 +31,9 @@ const AddressModal = ({ setShowAddressModal }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-
+        if (!requireAuth()) throw new Error('Please login')
+        const created = await api('/addresses', { method: 'POST', auth: true, body: address })
+        dispatch(addAddress(created))
         setShowAddressModal(false)
     }
 
@@ -41,7 +49,7 @@ const AddressModal = ({ setShowAddressModal }) => {
                     <input name="state" onChange={handleAddressChange} value={address.state} className="p-2 px-4 outline-none border border-slate-200 rounded w-full" type="text" placeholder="State" required />
                 </div>
                 <div className="flex gap-4">
-                    <input name="zip" onChange={handleAddressChange} value={address.zip} className="p-2 px-4 outline-none border border-slate-200 rounded w-full" type="number" placeholder="Zip code" required />
+                    <input name="zip" onChange={handleAddressChange} value={address.zip} className="p-2 px-4 outline-none border border-slate-200 rounded w-full" type="text" placeholder="Zip code" required />
                     <input name="country" onChange={handleAddressChange} value={address.country} className="p-2 px-4 outline-none border border-slate-200 rounded w-full" type="text" placeholder="Country" required />
                 </div>
                 <input name="phone" onChange={handleAddressChange} value={address.phone} className="p-2 px-4 outline-none border border-slate-200 rounded w-full" type="text" placeholder="Phone" required />

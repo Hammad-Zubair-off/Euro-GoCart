@@ -5,22 +5,20 @@ import Link from "next/link"
 import { ArrowRightIcon } from "lucide-react"
 import AdminNavbar from "./AdminNavbar"
 import AdminSidebar from "./AdminSidebar"
+import { useAuth } from "../AuthProvider"
 
 const AdminLayout = ({ children }) => {
 
-    const [isAdmin, setIsAdmin] = useState(false)
+    const { isLoggedIn, isAdmin, loading: authLoading, setShowLogin } = useAuth()
     const [loading, setLoading] = useState(true)
 
-    const fetchIsAdmin = async () => {
-        setIsAdmin(true)
-        setLoading(false)
-    }
-
     useEffect(() => {
-        fetchIsAdmin()
-    }, [])
+        if (authLoading) return
+        if (!isLoggedIn) setShowLogin(true)
+        setLoading(false)
+    }, [isLoggedIn, isAdmin, authLoading, setShowLogin])
 
-    return loading ? (
+    return loading || authLoading ? (
         <Loading />
     ) : isAdmin ? (
         <div className="flex flex-col h-screen">

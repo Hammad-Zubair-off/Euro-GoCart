@@ -3,6 +3,7 @@ import { assets } from "@/assets/assets"
 import Image from "next/image"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
+import { api } from "@/lib/api"
 
 export default function StoreAddProduct() {
 
@@ -25,8 +26,26 @@ export default function StoreAddProduct() {
 
     const onSubmitHandler = async (e) => {
         e.preventDefault()
-        // Logic to add a product
-        
+        const files = Object.values(images).filter(Boolean)
+        if (files.length === 0) throw new Error('Add at least one image')
+
+        setLoading(true)
+        try {
+            const form = new FormData()
+            files.forEach((file) => form.append('images', file))
+            form.append('name', productInfo.name)
+            form.append('description', productInfo.description)
+            form.append('mrp', productInfo.mrp)
+            form.append('price', productInfo.price)
+            form.append('category', productInfo.category)
+
+            await api('/products', { method: 'POST', auth: true, body: form })
+            setImages({ 1: null, 2: null, 3: null, 4: null })
+            setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "" })
+            toast.success('Product added')
+        } finally {
+            setLoading(false)
+        }
     }
 
 

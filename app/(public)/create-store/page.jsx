@@ -4,8 +4,14 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import toast from "react-hot-toast"
 import Loading from "@/components/Loading"
+import { api } from "@/lib/api"
+import { useAuth } from "@/components/AuthProvider"
+import { useRouter } from "next/navigation"
 
 export default function CreateStore() {
+
+    const { isLoggedIn, requireAuth, refreshMe, loading: authLoading } = useAuth()
+    const router = useRouter()
 
     const [alreadySubmitted, setAlreadySubmitted] = useState(false)
     const [status, setStatus] = useState("")
@@ -27,29 +33,59 @@ export default function CreateStore() {
     }
 
     const fetchSellerStatus = async () => {
-        // Logic to check if the store is already submitted
-
-
-        setLoading(false)
+        if (!isLoggedIn) {
+            setLoading(false)
+            return
+        }
+        try {
+            const data = await api('/store/me', { auth: true })
+            if (data.status && data.status !== 'none') {
+                setAlreadySubmitted(true)
+                setStatus(data.status)
+                if (data.status === 'pending') setMessage('Your store application is pending admin approval.')
+                if (data.status === 'approved') {
+                    setMessage('Your store is approved! Opening dashboard...')
+                    setTimeout(() => router.push('/store'), 3000)
+                }
+                if (data.status === 'rejected') setMessage('Your store application was rejected. Contact support.')
+            }
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const onSubmitHandler = async (e) => {
         e.preventDefault()
-        // Logic to submit the store details
+        if (!requireAuth()) throw new Error('Please login first')
+        if (!storeInfo.image) throw new Error('Please upload a store logo')
 
+        const form = new FormData()
+        form.append('logo', storeInfo.image)
+        form.append('name', storeInfo.name)
+        form.append('username', storeInfo.username)
+        form.append('description', storeInfo.description)
+        form.append('email', storeInfo.email)
+        form.append('contact', storeInfo.contact)
+        form.append('address', storeInfo.address)
 
+        await api('/store', { method: 'POST', auth: true, body: form })
+        await refreshMe()
+        setAlreadySubmitted(true)
+        setStatus('pending')
+        setMessage('Your store application is pending admin approval.')
     }
 
     useEffect(() => {
-        fetchSellerStatus()
-    }, [])
+        if (!authLoading) fetchSellerStatus()
+    }, [isLoggedIn, authLoading])
 
-    return !loading ? (
+    return !loading && !authLoading ? (
         <>
             {!alreadySubmitted ? (
                 <div className="mx-6 min-h-[70vh] my-16">
                     <form onSubmit={e => toast.promise(onSubmitHandler(e), { loading: "Submitting data..." })} className="max-w-7xl mx-auto flex flex-col items-start gap-3 text-slate-500">
-                        {/* Title */}
                         <div>
                             <h1 className="text-3xl ">Add Your <span className="text-slate-800 font-medium">Store</span></h1>
                             <p className="max-w-lg">To become a seller on Euro GoCart, submit your store details for review. Your store will be activated after admin verification.</p>

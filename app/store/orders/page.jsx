@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from "react"
 import Loading from "@/components/Loading"
-import { orderDummyData } from "@/assets/assets"
+import { api } from "@/lib/api"
 
 export default function StoreOrders() {
     const [orders, setOrders] = useState([])
@@ -11,14 +11,24 @@ export default function StoreOrders() {
 
 
     const fetchOrders = async () => {
-       setOrders(orderDummyData)
-       setLoading(false)
+       try {
+           const data = await api('/store/orders', { auth: true })
+           setOrders(data || [])
+       } catch (err) {
+           console.error(err)
+       } finally {
+           setLoading(false)
+       }
     }
 
     const updateOrderStatus = async (orderId, status) => {
-        // Logic to update the status of an order
-
-
+        const updated = await api(`/store/orders/${orderId}/status`, {
+            method: 'PATCH',
+            auth: true,
+            body: { status },
+        })
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)))
+        setSelectedOrder(updated)
     }
 
     const openModal = (order) => {

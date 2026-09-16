@@ -2,15 +2,38 @@
 import PageTitle from "@/components/PageTitle"
 import { useEffect, useState } from "react";
 import OrderItem from "@/components/OrderItem";
-import { orderDummyData } from "@/assets/assets";
+import { api } from "@/lib/api";
+import { useAuth } from "@/components/AuthProvider";
+import Loading from "@/components/Loading";
 
 export default function Orders() {
 
     const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const { isLoggedIn, loading: authLoading, setShowLogin } = useAuth();
 
     useEffect(() => {
-        setOrders(orderDummyData)
-    }, []);
+        if (authLoading) return;
+        if (!isLoggedIn) {
+            setLoading(false);
+            setShowLogin(true);
+            return;
+        }
+        const load = async () => {
+            try {
+                const data = await api('/orders', { auth: true });
+                setOrders(data || []);
+            } catch (err) {
+                console.error(err);
+                setOrders([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [isLoggedIn, authLoading, setShowLogin]);
+
+    if (loading || authLoading) return <Loading />;
 
     return (
         <div className="min-h-[70vh] mx-6">
